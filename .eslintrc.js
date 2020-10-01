@@ -32,6 +32,7 @@ module.exports = {
     'indent': ['warn', 2, {
       // continuation indent
       MemberExpression: 'off',
+      SwitchCase: 1,
     }],
 
     'array-bracket-spacing': ['warn', 'never'],
