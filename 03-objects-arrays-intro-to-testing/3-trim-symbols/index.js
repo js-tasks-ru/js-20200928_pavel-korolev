@@ -13,7 +13,16 @@ export function trimSymbols(string, size) {
     return string;
   }
 
+  let pointer = 0;
+
   return string.split('').reduce((acc, char) => {
-    return acc.split(char).length > size ? acc : `${acc}${char}`;
+    const count = acc.slice(pointer).split(char).length;
+    const prev = acc.charAt(acc.length - 1);
+
+    if (prev && char !== prev) {
+      pointer = acc.length;
+    }
+
+    return count > size ? acc : `${acc}${char}`;
   }, '');
 }
