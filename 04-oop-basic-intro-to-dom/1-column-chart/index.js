@@ -1,5 +1,3 @@
-const MAX_COLUMN_HEIGHT = 50;
-
 const normalizeData = (data, limit) => {
   const max = Math.max.apply(null, data);
   return data.map(n => ({
@@ -9,12 +7,18 @@ const normalizeData = (data, limit) => {
 };
 
 export default class ColumnChart {
-  constructor (options = {}) {
-    this.data = options.data || [];
-    this.label = options.label || '';
-    this.value = options.value || '';
-    this.link = options.link || '';
-    this.chartHeight = MAX_COLUMN_HEIGHT;
+  chartHeight = 50;
+
+  constructor ({
+    data = [],
+    label = '',
+    value = '',
+    link = '',
+  } = {}) {
+    this.data = data;
+    this.label = label;
+    this.value = value;
+    this.link = link;
     this.element = document.createElement('div');
     this.element.classList.add('column-chart');
 
@@ -58,6 +62,7 @@ export default class ColumnChart {
   }
 
   destroy() {
+    this.remove();
     return this;
   }
 }
