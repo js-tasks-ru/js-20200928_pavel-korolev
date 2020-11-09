@@ -1,5 +1,5 @@
 export default class NotificationMessage {
-  isVisible = false;
+  static isVisible = false;
 
   constructor(message, { duration, type } = {}) {
     this.message = message;

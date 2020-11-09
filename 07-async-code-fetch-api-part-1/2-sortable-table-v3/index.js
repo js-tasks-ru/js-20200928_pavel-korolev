@@ -9,6 +9,7 @@ const createElement = template => {
 
 export default class SortableTable {
   subElements = {};
+  step = 20;
 
   constructor(headerData, {
     url = '/',
@@ -18,26 +19,38 @@ export default class SortableTable {
     this.params = {
       sort: this.headerData.find(obj => obj.sortable).id,
       order: this.getOrder(),
-      start: 0,
-      end: 30,
+      start: 1,
+      end: this.step,
     };
     this.isServerSortAllowed = true;
+    this.isInfinityScrollEnabled = true;
+    this.isLoading = false;
 
     this.render();
   }
 
   async loadData(params) {
+    this.isLoading = true;
     this.setGETParams(params);
     this.element.classList.add('sortable-table_loading');
     this.element.classList.remove('sortable-table_empty');
-    this.subElements.body.innerHTML = '';
 
     try {
-      this.data = await fetchJson(this.url);
+      const result = await fetchJson(this.url);
+      if (result.length) {
+        this.data = result;
+        this.subElements.body.innerHTML = `
+          ${this.subElements.body.innerHTML}
+          ${this.getBodyTemplate()}
+        `;
+      } else {
+        this.isInfinityScrollEnabled = false;
+      }
     } catch (err) {
       this.data = [];
     } finally {
-      this.updateElementHtml();
+      this.isLoading = false;
+      this.element.classList.remove('sortable-table_loading');
     }
   }
 
@@ -65,16 +78,18 @@ export default class SortableTable {
             <button type="button" class="button-primary-outline">Reset all filters</button>
           </div>
         </div>
-      <div>
+      </div>
     `;
   }
 
   initEventListeners() {
     this.subElements.header.addEventListener('pointerdown', this.onPointerDown);
+    document.addEventListener('scroll', this.onScroll);
   }
 
   removeEventListeners() {
     this.subElements.header.removeEventListener('pointerdown', this.onPointerDown);
+    document.removeEventListener('scroll', this.onScroll);
   }
 
   onPointerDown = event => {
@@ -94,7 +109,24 @@ export default class SortableTable {
     }
   }
 
+  onScroll = () => {
+    if (!this.isInfinityScrollEnabled) {
+      return;
+    }
+
+    const { bottom } = this.element.getBoundingClientRect();
+    const { end } = this.params;
+
+    if (bottom < window.innerHeight && !this.isLoading && this.isServerSortAllowed) {
+      this.params.start = end;
+      this.params.end = end + this.step;
+      this.loadData(this.params);
+    }
+  }
+
   sortOnServer(id, order) {
+    this.subElements.body.innerHTML = '';
+    this.params.start = 1;
     this.params.sort = id;
     this.params.order = order;
     this.loadData(this.params);
@@ -107,19 +139,12 @@ export default class SortableTable {
   }
 
   async render() {
-    this.element = createElement(this.template);
+    const el = document.createElement('div');
+    el.innerHTML = this.template;
+    this.element = el.firstElementChild;
     this.createRefs(this.element);
     await this.loadData(this.params);
     this.initEventListeners();
-  }
-
-  updateElementHtml() {
-    if (this.data.length) {
-      this.element.classList.remove('sortable-table_loading');
-      this.subElements.body.innerHTML = this.getBodyTemplate();
-    } else {
-      this.element.classList.add('sortable-table_empty');
-    }
   }
 
   getHeaderTemplate() {
@@ -146,23 +171,24 @@ export default class SortableTable {
       return `
         ${html}
         <a href="/products/${id}" class="sortable-table__row">
-          ${this.getRowImageTemplate(images)}
+          ${this.getRowImageTemplate(images, title)}
           ${this.getRowCellsTemplate([title, quantity, price, sales])}
         </a>
       `;
     }, '');
   }
 
-  getRowImageTemplate(images) {
+  getRowImageTemplate(images, title) {
     if (!images) {
       return '';
     }
 
     const [firstImage] = images;
+    const imgSrc = firstImage ? `src="${firstImage.url}"` : '';
 
     return `
       <div class="sortable-table__cell">
-        <img class="sortable-table-image" alt="Image" src="${firstImage.url}">
+        <img class="sortable-table-image" alt="${title}" ${imgSrc}>
       </div>
     `;
   }
